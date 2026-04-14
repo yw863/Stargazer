@@ -1,0 +1,29 @@
+[
+  {
+    "event_id": "C2025R3",
+    "name": "C/2025 R3 彗星",
+    "type": "comet",
+    "status": "active",
+    "best_period": "2026年4月中旬 - 5月上旬",
+    "cobs_designation": "C/2025 R3",
+    "horizons_id": "C/2025 R3"
+  },
+  {
+    "event_id": "PERSEIDS2026",
+    "name": "英仙座流星雨",
+    "type": "meteor_shower",
+    "status": "coming_soon",
+    "best_period": "2026年8月中旬",
+    "cobs_designation": null,
+    "horizons_id": null
+  },
+  {
+    "event_id": "GEMINIDS2026",
+    "name": "双子座流星雨",
+    "type": "meteor_shower",
+    "status": "coming_soon",
+    "best_period": "2026年12月中旬",
+    "cobs_designation": null,
+    "horizons_id": null
+  }
+]

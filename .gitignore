@@ -1,0 +1,44 @@
+# 依赖
+node_modules/
+frontend/node_modules/
+
+# 环境变量（含 API Key，绝不提交）
+.env
+.env.local
+frontend/.env
+frontend/.env.local
+
+# 每日拟合缓存（由 GitHub Actions 自动更新）
+data/cache/*.json
+!data/cache/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+backend/__pycache__/
+backend/**/__pycache__/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Vite 构建产物
+frontend/dist/
+frontend/.vite/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Claude Code 本地配置（不提交）
+.claude/settings.local.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
