@@ -1,0 +1,46 @@
+name: 每日彗星光变拟合
+
+on:
+  schedule:
+    # 每日 UTC 17:00 = 北京时间 01:00，在深夜低峰期更新缓存
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+    # 允许手动触发（用于测试或补跑）
+
+jobs:
+  fit:
+    name: 拟合并更新缓存
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 允许 push 缓存文件回仓库
+
+    steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: 安装依赖
+        run: pip install -r backend/requirements.txt
+
+      - name: 执行拟合
+        run: python3 backend/daily_job/daily_fit.py
+        # 脚本失败时 exit(1)，Actions 会将 job 标记为失败
+
+      - name: 提交缓存更新
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/cache/
+          # 若缓存无变化则跳过提交（--allow-empty 不允许，用 diff --cached 判断）
+          if git diff --cached --quiet; then
+            echo "缓存无变化，跳过提交。"
+          else
+            git commit -m "chore: 更新彗星拟合缓存 $(date -u +%Y-%m-%d)"
+            git push
+          fi
