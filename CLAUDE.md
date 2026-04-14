@@ -21,7 +21,7 @@ MVP 阶段仅支持 C/2025 R3 彗星，地点覆盖长三角地区。
 | RAG 知识库 | Dify 内置知识库模块 |
 | 彗星亮度预测 | Python（scipy curve_fit） |
 | 天文星历 | JPL Horizons API |
-| 彗星观测数据 | COBS API（ICQ 格式） |
+| 彗星观测数据 | COBS API（JSON 格式） |
 | 天气 | 7Timer（ASTRO 优先，CIVIL 降级） |
 | 交通路线 + 地理编码 | 高德地图 API |
 | 部署 | 前端 Vercel，后端 Dify 云端 |
@@ -91,10 +91,11 @@ mock 数据文件放在 `/src/mocks/` 目录下。
 结果页需要展示交互式地图（候选地点分布）。MVP 阶段使用高德地图 JS API。
 
 **注意：高德有两个独立的 Key，走不同路径**：
-- **JS API Key**：前端使用，加载地图组件。通过环境变量 `REACT_APP_AMAP_JS_KEY` 引用，不得硬编码。
+- **JS API Key**：前端使用，加载地图组件。通过环境变量 `VITE_AMAP_JS_KEY` 引用，不得硬编码。
 - **Web 服务 Key**：后端使用（Dify），调用路径规划和地理编码 API。
 
-前端代码中通过 `process.env.REACT_APP_AMAP_JS_KEY` 获取 Key 初始化高德地图 SDK。
+前端代码中通过 `import.meta.env.VITE_AMAP_JS_KEY` 获取 Key 初始化高德地图 SDK。
+安全密钥通过 `import.meta.env.VITE_AMAP_SECURITY_CODE` 获取，用于高德 JS API 2.0 安全校验。
 
 ## 后端开发规范
 
@@ -104,7 +105,7 @@ mock 数据文件放在 `/src/mocks/` 目录下。
 
 Claude Code 在后端开发中的角色是编写以下辅助代码：
 
-1. **COBS 数据解析器**：解析 ICQ 固定宽度格式，提取日期和表观星等。
+1. **COBS 数据解析器**：解析 COBS JSON 格式（`format=json`），提取日期和表观星等。
 2. **彗星光变拟合脚本**：用 scipy curve_fit 拟合 H 和 n，输入 COBS 观测数据 + Horizons 星历数据。
 3. **Horizons API 响应解析器**：解析嵌在 JSON `result` 字段中的纯文本表格，提取 r、Δ、S-O-T、T-O-M 等字段。
 4. **7Timer 数据处理器**：解析 JSON，按 timepoint 计算实际时间，提取夜间时段数据，实现 ASTRO → CIVIL 降级逻辑。
@@ -125,7 +126,8 @@ Claude Code 在后端开发中的角色是编写以下辅助代码：
 所有 API Key 通过环境变量注入，不得硬编码在代码中。
 
 **前端环境变量**（`.env` 文件，已加入 `.gitignore`）：
-- `REACT_APP_AMAP_JS_KEY`：高德地图 JS API Key（地图展示用）
+- `VITE_AMAP_JS_KEY`：高德地图 JS API Key（地图展示用）
+- `VITE_AMAP_SECURITY_CODE`：高德地图安全密钥（JS API 2.0 安全校验）
 
 **后端环境变量**（Dify 环境配置）：
 - `AMAP_WEB_SERVICE_KEY`：高德地图 Web 服务 Key（路径规划 + 地理编码用）
@@ -155,7 +157,7 @@ stargazer/
 │   └── package.json
 ├── backend/                     # Dify 辅助脚本
 │   ├── tools/                   # Dify 自定义工具
-│   │   ├── cobs_parser.py       # COBS ICQ 格式解析
+│   │   ├── cobs_parser.py       # COBS JSON 格式解析
 │   │   ├── comet_model.py       # 彗星光变拟合
 │   │   ├── horizons_parser.py   # Horizons 响应解析
 │   │   ├── weather_processor.py # 7Timer 数据处理 + 降级逻辑
