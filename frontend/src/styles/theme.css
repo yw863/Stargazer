@@ -31,8 +31,9 @@
   --color-danger: #9e4a4a;
 
   /* 排版 */
-  --font-sans: 'Inter', 'PingFang SC', 'Helvetica Neue', sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-display: 'Spectral', 'Noto Serif SC', serif;             /* 标题 / 事件名：优雅衬线 */
+  --font-sans: 'DM Sans', 'Noto Serif SC', sans-serif;            /* 正文 / UI 标签 / 中文 */
+  --font-mono: 'Geist Mono', monospace;                           /* 数字读数（星等、距离、角距、时间等所有纯数字） */
   --font-size-xs: 0.75rem;   /* 12px */
   --font-size-sm: 0.8125rem; /* 13px */
   --font-size-base: 0.9375rem; /* 15px */
