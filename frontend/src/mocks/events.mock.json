@@ -6,7 +6,17 @@
       "type": "comet",
       "status": "active",
       "best_period": "2026年4月中旬 - 5月上旬",
-      "current_summary": "目视星等 ~5.1 · 肉眼极限附近 · 昏星"
+      "period_start": "2026-04-10",
+      "period_end": "2026-05-10",
+      "current_summary": "目视星等 ~5.1 · 肉眼极限附近 · 昏星",
+      "comet_ra": 130.5,
+      "comet_dec": 19.8,
+      "ephemeris": {
+        "r_au": 0.87,
+        "delta_au": 1.34,
+        "solar_elongation_deg": 38,
+        "altitude_deg": 21
+      }
     },
     {
       "event_id": "PERSEIDS2026",

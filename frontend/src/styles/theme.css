@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'JingHuaOldSong';
+  src: url('/fonts/JingHuaOldSong.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* StarGazer 深色主题 CSS 变量
    基调：神秘、简约、深邃、精密工具感
    参照 CLAUDE.md 设计规范 */
@@ -31,7 +39,8 @@
   --color-danger: #9e4a4a;
 
   /* 排版 */
-  --font-display: 'Spectral', 'Noto Serif SC', serif;             /* 标题 / 事件名：优雅衬线 */
+  --font-display: 'Spectral', 'Noto Serif SC', serif;
+  --font-heading: 'EB Garamond', 'JingHuaOldSong', 'Noto Serif SC', serif;          /* 标题 / 事件名：优雅衬线 */
   --font-sans: 'DM Sans', 'Noto Serif SC', sans-serif;            /* 正文 / UI 标签 / 中文 */
   --font-mono: 'Geist Mono', monospace;                           /* 数字读数（星等、距离、角距、时间等所有纯数字） */
   --font-size-xs: 0.75rem;   /* 12px */
@@ -53,6 +62,7 @@
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-6: 1.5rem;
+  --space-7: 1.75rem;
   --space-8: 2rem;
   --space-12: 3rem;
   --space-16: 4rem;

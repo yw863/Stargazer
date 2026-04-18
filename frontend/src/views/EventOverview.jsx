@@ -1,13 +1,13 @@
+import { useMemo } from 'react'
 import eventsData from '../mocks/events.mock.json'
+import StarField from '../components/StarField'
 import './EventOverview.css'
 
-/* 事件类型中文映射 */
 const TYPE_LABEL = {
   comet: '彗星',
   meteor_shower: '流星雨',
 }
 
-/* 当前日期，仪器读数格式：2026.04.15 */
 function formatObsDate() {
   const now = new Date()
   const y = now.getFullYear()
@@ -16,15 +16,36 @@ function formatObsDate() {
   return `${y}.${m}.${d}`
 }
 
-function EventItem({ event, index, onEventSelect }) {
-  const isActive = event.status === 'active'
+function periodToShort(str) {
+  const match = str.match(/(\d{4})年(\d+)月/)
+  if (!match) return str
+  return `${match[1]}.${match[2].padStart(2, '0')}`
+}
 
-  const handleClick = () => {
-    if (isActive) onEventSelect(event)
-  }
+function computeAxisProgress(periodStart, periodEnd) {
+  if (!periodStart || !periodEnd) return null
+  const start = new Date(periodStart).getTime()
+  const end = new Date(periodEnd).getTime()
+  const progress = (Date.now() - start) / (end - start)
+  return Math.max(0.02, Math.min(0.98, progress))
+}
 
+function ActiveEventItem({ event, index, onEventSelect }) {
+  const progress = useMemo(
+    () => computeAxisProgress(event.period_start, event.period_end),
+    [event.period_start, event.period_end]
+  )
+
+  const startLabel = event.period_start
+    ? event.period_start.slice(0, 7).replace(/-/g, '.')
+    : ''
+  const endLabel = event.period_end
+    ? event.period_end.slice(0, 7).replace(/-/g, '.')
+    : ''
+
+  const handleClick = () => onEventSelect(event)
   const handleKeyDown = (e) => {
-    if (isActive && (e.key === 'Enter' || e.key === ' ')) {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       onEventSelect(event)
     }
@@ -32,73 +53,138 @@ function EventItem({ event, index, onEventSelect }) {
 
   return (
     <li
-      className={`event-item ${isActive ? 'event-item--active' : 'event-item--coming-soon'}`}
+      className="event-item event-item--active"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      role={isActive ? 'button' : undefined}
-      tabIndex={isActive ? 0 : undefined}
-      aria-label={isActive ? `进入 ${event.name} 观测规划` : undefined}
-      aria-disabled={!isActive ? 'true' : undefined}
+      role="button"
+      tabIndex={0}
+      aria-label={`进入 ${event.name} 观测规划`}
+      style={{ animationDelay: `${80 + index * 80}ms` }}
     >
-      {/* 序号（星历表式） */}
       <span className="event-item__index" aria-hidden="true">
         {String(index + 1).padStart(2, '0')}
       </span>
 
-      {/* 名称 */}
       <span className="event-item__name">{event.name}</span>
 
-      {/* 类型标签 */}
       <span className="event-item__type">
         {TYPE_LABEL[event.type] ?? event.type}
       </span>
 
-      {/* 最佳时段 */}
-      <span className="event-item__period">{event.best_period}</span>
+      <div className="event-item__date-axis">
+        <span className="event-item__date-label">{startLabel}</span>
+        <div className="event-item__axis-track">
+          {progress !== null && (
+            <span
+              className="event-item__axis-cursor"
+              style={{ left: `${progress * 100}%` }}
+              aria-hidden="true"
+            />
+          )}
+        </div>
+        <span className="event-item__date-label">{endLabel}</span>
+      </div>
 
-      {/* 状态描述 或 即将上线 */}
-      {isActive && event.current_summary ? (
+      <div className="event-item__summary-row">
+        <span className="event-item__pulse-dot" aria-hidden="true" />
         <span className="event-item__summary">{event.current_summary}</span>
-      ) : (
-        <span className="event-item__coming-soon-label">即将上线</span>
-      )}
+      </div>
 
-      {/* 指示符：active → 进入箭头；coming-soon → 锁定圆圈 */}
-      {isActive ? (
-        <span className="event-item__arrow" aria-hidden="true">→</span>
-      ) : (
-        <span className="event-item__lock" aria-hidden="true">○</span>
+      <span className="event-item__arrow" aria-hidden="true">→</span>
+
+      {event.ephemeris && (
+        <div className="event-item__ephemeris">
+          r {event.ephemeris.r_au} AU · Δ {event.ephemeris.delta_au} AU
+          &nbsp;· 日距角 {event.ephemeris.solar_elongation_deg}°
+          &nbsp;· 高度角 {event.ephemeris.altitude_deg}°
+        </div>
       )}
+    </li>
+  )
+}
+
+function UpcomingEventItem({ event, displayIndex, staggerIndex }) {
+  return (
+    <li
+      className="event-item event-item--upcoming"
+      aria-disabled="true"
+      style={{ animationDelay: `${80 + staggerIndex * 80}ms` }}
+    >
+      <span className="event-item__index" aria-hidden="true">
+        {String(displayIndex + 1).padStart(2, '0')}
+      </span>
+
+      <div className="event-item__upcoming-row">
+        <span className="event-item__period-short">
+          {periodToShort(event.best_period)}
+        </span>
+        <span className="event-item__name">{event.name}</span>
+      </div>
+
+      <span className="event-item__type">
+        {TYPE_LABEL[event.type] ?? event.type}
+      </span>
     </li>
   )
 }
 
 export default function EventOverview({ onEventSelect }) {
   const { events } = eventsData
+  const activeEvents = events.filter((e) => e.status === 'active')
+  const upcomingEvents = events.filter((e) => e.status === 'coming_soon')
+
+  const comet = activeEvents.find((e) => e.type === 'comet' && e.comet_ra)
+  const cometRa = comet?.comet_ra ?? 130.5
+  const cometDec = comet?.comet_dec ?? 19.8
 
   return (
     <section className="overview" aria-label="近期天文事件">
-      {/* 仪器读数 meta bar */}
-      <div className="overview__meta-bar" aria-hidden="true">
-        <span>{formatObsDate()}</span>
-        <span>长三角 · 天象概览</span>
+      <StarField cometRa={cometRa} cometDec={cometDec} />
+
+      <div className="overview__content">
+        <div className="overview__meta-bar" aria-hidden="true">
+          <span>{formatObsDate()}</span>
+          <span>长三角 · 天象概览</span>
+        </div>
+
+        <p className="overview__eyebrow">Do Look Up ——</p>
+        <h1 className="overview__heading">近日可见：</h1>
+
+        <ul className="event-list" role="list">
+          {activeEvents.map((event, i) => (
+            <ActiveEventItem
+              key={event.event_id}
+              event={event}
+              index={i}
+              onEventSelect={onEventSelect}
+            />
+          ))}
+        </ul>
+
+        {upcomingEvents.length > 0 && (
+          <>
+            <div
+              className="upcoming-header"
+              aria-hidden="true"
+              style={{
+                animationDelay: `${80 + activeEvents.length * 80 + 40}ms`,
+              }}
+            >
+              <span className="upcoming-header__label">排程 · upcoming</span>
+            </div>
+            <ul className="event-list event-list--upcoming" role="list">
+              {upcomingEvents.map((event, i) => (
+                <UpcomingEventItem
+                  key={event.event_id}
+                  event={event}
+                  displayIndex={activeEvents.length + i}
+                  staggerIndex={activeEvents.length + i + 1}
+                />
+              ))}
+            </ul>
+          </>
+        )}
       </div>
-
-      {/* 页头 */}
-      <p className="overview__eyebrow">Do Look Up——</p>
-      <h1 className="overview__heading">近日可见：</h1>
-
-      {/* 事件列表 */}
-      <ul className="event-list" role="list">
-        {events.map((event, i) => (
-          <EventItem
-            key={event.event_id}
-            event={event}
-            index={i}
-            onEventSelect={onEventSelect}
-          />
-        ))}
-      </ul>
     </section>
   )
 }

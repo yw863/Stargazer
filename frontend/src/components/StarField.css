@@ -1,0 +1,15 @@
+.starfield {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starfield__reticle {
+    /* keep visible but remove any future animation */
+    animation: none;
+  }
+}

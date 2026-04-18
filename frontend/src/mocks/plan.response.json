@@ -1,0 +1,348 @@
+{
+  "observation_summary": {
+    "best_date": "2026-04-22",
+    "predicted_magnitude": 4.6,
+    "visibility_type": "evening",
+    "solar_elongation": 13.8,
+    "moon_phase": "残月",
+    "moon_illumination_percent": 27.0,
+    "moon_impact": "低",
+    "azimuth_at_peak": 330,
+    "altitude_at_peak": 24
+  },
+  "date_notes": [
+    {
+      "date": "2026-04-22",
+      "observable": true,
+      "weather_source": "civil",
+      "summary": {
+        "predicted_magnitude": 4.6,
+        "visibility_type": "evening",
+        "solar_elongation": 13.8,
+        "moon_phase": "残月",
+        "moon_illumination_percent": 27.0,
+        "moon_impact": "低",
+        "best_window": { "start": "20:30", "end": "22:15" },
+        "target_direction": "西偏北",
+        "target_altitude": "15°–25°",
+        "sunset": "17:58",
+        "civil_dusk": "18:26",
+        "astro_dusk": "18:53",
+        "target_rise": "19:40",
+        "target_peak": "21:22",
+        "moon_set": "22:30",
+        "astro_dawn": "04:05",
+        "sunrise": "05:02"
+      }
+    },
+    {
+      "date": "2026-04-23",
+      "observable": true,
+      "weather_source": "civil",
+      "summary": {
+        "predicted_magnitude": 4.7,
+        "visibility_type": "evening",
+        "solar_elongation": 12.9,
+        "moon_phase": "残月",
+        "moon_illumination_percent": 18.0,
+        "moon_impact": "极低",
+        "best_window": { "start": "20:28", "end": "22:10" },
+        "target_direction": "西偏北",
+        "target_altitude": "14°–23°",
+        "sunset": "17:59",
+        "civil_dusk": "18:27",
+        "astro_dusk": "18:54",
+        "target_rise": "19:45",
+        "target_peak": "21:18",
+        "moon_set": "23:15",
+        "astro_dawn": "04:04",
+        "sunrise": "05:01"
+      }
+    },
+    {
+      "date": "2026-04-24",
+      "observable": true,
+      "weather_source": "civil",
+      "warning": "太阳角距 6.4°，观测窗口极短",
+      "summary": {
+        "predicted_magnitude": 4.8,
+        "visibility_type": "evening",
+        "solar_elongation": 6.4,
+        "moon_phase": "新月前",
+        "moon_illumination_percent": 10.0,
+        "moon_impact": "无",
+        "best_window": { "start": "20:30", "end": "21:10" },
+        "target_direction": "西",
+        "target_altitude": "5°–12°",
+        "sunset": "18:00",
+        "civil_dusk": "18:28",
+        "astro_dusk": "18:55",
+        "target_rise": "19:50",
+        "target_peak": "20:50",
+        "moon_set": null,
+        "astro_dawn": "04:03",
+        "sunrise": "05:00"
+      }
+    }
+  ],
+  "recommendations": [
+    {
+      "rank": 1,
+      "overall_score": 87,
+      "location": {
+        "name": "天荒坪观星营地",
+        "latitude": 30.58,
+        "longitude": 119.68,
+        "bortle": 3
+      },
+      "weather": {
+        "cloudcover": 2,
+        "transparency": null,
+        "weather_source": "civil",
+        "weather_score": 85
+      },
+      "transit": {
+        "options": [
+          {
+            "mode": "公共交通",
+            "duration_minutes": 180,
+            "summary": "地铁2号线 → G7388至安吉 → 公交57路 → 步行25min"
+          }
+        ]
+      },
+      "notes": "西侧开阔无遮挡，适合观测西偏北低空目标；营地有停车场，营地内光源管制良好",
+      "date_comparison": [
+        { "date": "2026-04-22", "weather_score": 85 },
+        { "date": "2026-04-23", "weather_score": 42 },
+        { "date": "2026-04-24", "weather_score": 70 }
+      ],
+      "azimuth_elevation": [
+        { "time": "19:00", "az": 262, "el": 3 },
+        { "time": "19:30", "az": 278, "el": 8 },
+        { "time": "20:00", "az": 295, "el": 14 },
+        { "time": "20:30", "az": 310, "el": 19 },
+        { "time": "21:00", "az": 322, "el": 23 },
+        { "time": "21:22", "az": 330, "el": 24 },
+        { "time": "22:00", "az": 339, "el": 21 },
+        { "time": "22:15", "az": 342, "el": 18 },
+        { "time": "22:30", "az": 345, "el": 15 },
+        { "time": "23:00", "az": 350, "el": 9 }
+      ]
+    },
+    {
+      "rank": 2,
+      "overall_score": 82,
+      "location": {
+        "name": "东白山天文台",
+        "latitude": 29.12,
+        "longitude": 120.43,
+        "bortle": 3
+      },
+      "weather": {
+        "cloudcover": 3,
+        "transparency": 3,
+        "weather_source": "astro",
+        "weather_score": 78
+      },
+      "transit": {
+        "options": [
+          {
+            "mode": "公共交通",
+            "duration_minutes": 260,
+            "summary": "高铁至东阳 → 客运至东白山 → 步行10min"
+          }
+        ]
+      },
+      "notes": "海拔1194m，透明度优秀；北侧有东阳市区光害，建议朝西北方向架设",
+      "date_comparison": [
+        { "date": "2026-04-22", "weather_score": 78 },
+        { "date": "2026-04-23", "weather_score": 65 },
+        { "date": "2026-04-24", "weather_score": 81 }
+      ],
+      "azimuth_elevation": [
+        { "time": "19:00", "az": 261, "el": 2 },
+        { "time": "19:30", "az": 277, "el": 7 },
+        { "time": "20:00", "az": 294, "el": 13 },
+        { "time": "20:30", "az": 309, "el": 18 },
+        { "time": "21:00", "az": 321, "el": 22 },
+        { "time": "21:22", "az": 329, "el": 23 },
+        { "time": "22:00", "az": 338, "el": 20 },
+        { "time": "22:15", "az": 341, "el": 17 },
+        { "time": "22:30", "az": 344, "el": 14 },
+        { "time": "23:00", "az": 349, "el": 8 }
+      ]
+    },
+    {
+      "rank": 3,
+      "overall_score": 78,
+      "location": {
+        "name": "清凉峰保护区",
+        "latitude": 30.17,
+        "longitude": 118.73,
+        "bortle": 2
+      },
+      "weather": {
+        "cloudcover": 4,
+        "transparency": 2,
+        "weather_source": "astro",
+        "weather_score": 72
+      },
+      "transit": {
+        "options": [
+          {
+            "mode": "公共交通",
+            "duration_minutes": 300,
+            "summary": "高铁至杭州 → 客运至临安 → 包车接驳30min"
+          }
+        ]
+      },
+      "notes": "Bortle 2级极暗区，但云量预报中等；西侧山脊略有遮挡，目标高度角 >10°方可观测",
+      "date_comparison": [
+        { "date": "2026-04-22", "weather_score": 72 },
+        { "date": "2026-04-23", "weather_score": 58 },
+        { "date": "2026-04-24", "weather_score": 62 }
+      ],
+      "azimuth_elevation": [
+        { "time": "19:00", "az": 260, "el": 2 },
+        { "time": "19:30", "az": 276, "el": 7 },
+        { "time": "20:00", "az": 293, "el": 13 },
+        { "time": "20:30", "az": 308, "el": 18 },
+        { "time": "21:00", "az": 320, "el": 22 },
+        { "time": "21:22", "az": 328, "el": 23 },
+        { "time": "22:00", "az": 337, "el": 20 },
+        { "time": "22:15", "az": 340, "el": 17 },
+        { "time": "22:30", "az": 343, "el": 14 },
+        { "time": "23:00", "az": 348, "el": 8 }
+      ]
+    },
+    {
+      "rank": 4,
+      "overall_score": 74,
+      "location": {
+        "name": "天目山星空基地",
+        "latitude": 30.37,
+        "longitude": 119.42,
+        "bortle": 3
+      },
+      "weather": {
+        "cloudcover": 3,
+        "transparency": null,
+        "weather_source": "civil",
+        "weather_score": 68
+      },
+      "transit": {
+        "options": [
+          {
+            "mode": "公共交通",
+            "duration_minutes": 160,
+            "summary": "高铁至临安 → 公交702路 → 步行15min"
+          }
+        ]
+      },
+      "notes": "观测营地设施完善，有专业导师；东南方向有余杭区光害，不影响NW方向观测",
+      "date_comparison": [
+        { "date": "2026-04-22", "weather_score": 68 },
+        { "date": "2026-04-23", "weather_score": 75 },
+        { "date": "2026-04-24", "weather_score": 55 }
+      ],
+      "azimuth_elevation": [
+        { "time": "19:00", "az": 261, "el": 2 },
+        { "time": "19:30", "az": 277, "el": 7 },
+        { "time": "20:00", "az": 294, "el": 13 },
+        { "time": "20:30", "az": 308, "el": 18 },
+        { "time": "21:00", "az": 320, "el": 22 },
+        { "time": "21:22", "az": 328, "el": 23 },
+        { "time": "22:00", "az": 337, "el": 20 },
+        { "time": "22:15", "az": 341, "el": 17 },
+        { "time": "22:30", "az": 344, "el": 14 },
+        { "time": "23:00", "az": 349, "el": 8 }
+      ]
+    },
+    {
+      "rank": 5,
+      "overall_score": 71,
+      "location": {
+        "name": "四明山观测点",
+        "latitude": 29.68,
+        "longitude": 121.09,
+        "bortle": 4
+      },
+      "weather": {
+        "cloudcover": 2,
+        "transparency": 3,
+        "weather_source": "astro",
+        "weather_score": 82
+      },
+      "transit": {
+        "options": [
+          {
+            "mode": "公共交通",
+            "duration_minutes": 150,
+            "summary": "高铁至宁波 → 大巴至余姚 → 公交接驳20min"
+          }
+        ]
+      },
+      "notes": "天气条件最佳，但Bortle 4光污染较高；适合双筒观测，不建议目视寻彗",
+      "date_comparison": [
+        { "date": "2026-04-22", "weather_score": 82 },
+        { "date": "2026-04-23", "weather_score": 79 },
+        { "date": "2026-04-24", "weather_score": 88 }
+      ],
+      "azimuth_elevation": [
+        { "time": "19:00", "az": 262, "el": 3 },
+        { "time": "19:30", "az": 278, "el": 8 },
+        { "time": "20:00", "az": 295, "el": 14 },
+        { "time": "20:30", "az": 309, "el": 19 },
+        { "time": "21:00", "az": 321, "el": 23 },
+        { "time": "21:22", "az": 329, "el": 24 },
+        { "time": "22:00", "az": 338, "el": 21 },
+        { "time": "22:15", "az": 341, "el": 18 },
+        { "time": "22:30", "az": 344, "el": 15 },
+        { "time": "23:00", "az": 349, "el": 9 }
+      ]
+    },
+    {
+      "rank": 6,
+      "overall_score": 65,
+      "location": {
+        "name": "莫干山露营地",
+        "latitude": 30.62,
+        "longitude": 119.88,
+        "bortle": 4
+      },
+      "weather": {
+        "cloudcover": 5,
+        "transparency": null,
+        "weather_source": "civil",
+        "weather_score": 55
+      },
+      "transit": {
+        "options": [
+          {
+            "mode": "公共交通",
+            "duration_minutes": 120,
+            "summary": "高铁至德清 → 公交105路 → 步行10min"
+          }
+        ]
+      },
+      "notes": "交通最便利，但当晚云量偏高；作为备选方案，若天气临时转好可快速抵达",
+      "date_comparison": [
+        { "date": "2026-04-22", "weather_score": 55 },
+        { "date": "2026-04-23", "weather_score": 80 },
+        { "date": "2026-04-24", "weather_score": 61 }
+      ],
+      "azimuth_elevation": [
+        { "time": "19:00", "az": 262, "el": 3 },
+        { "time": "19:30", "az": 278, "el": 8 },
+        { "time": "20:00", "az": 295, "el": 14 },
+        { "time": "20:30", "az": 310, "el": 19 },
+        { "time": "21:00", "az": 322, "el": 23 },
+        { "time": "21:22", "az": 330, "el": 24 },
+        { "time": "22:00", "az": 339, "el": 21 },
+        { "time": "22:15", "az": 342, "el": 18 },
+        { "time": "22:30", "az": 345, "el": 15 },
+        { "time": "23:00", "az": 350, "el": 9 }
+      ]
+    }
+  ]
+}

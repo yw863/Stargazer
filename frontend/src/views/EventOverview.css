@@ -1,11 +1,10 @@
 /* ── 视图一：天文事件总览 ─────────────────────────────────── */
 
 /*
-  字体分配规则（不可随意更改）：
-  · Spectral (--font-display)  → 主要名称标签（事件名）
-  · DM Sans  (--font-sans)     → 分类/元数据标签（类型、时间段）
-  · Geist Mono (--font-mono)   → 任何包含数字或单位的数据字符串（星等、观测条件、日期）
-  · Noto Serif SC              → 以上三种字体的中文 fallback，无需显式指定
+  字体分配（不可更改）：
+  · Spectral  → 事件名称、页面标题
+  · DM Sans   → 分类标签、元数据
+  · Geist Mono → 所有含数字的读数（星等、距离、角度、日期）
 */
 
 /* ── 容器 ─────────────────────────────────────────────────── */
@@ -15,9 +14,14 @@
   padding-bottom: 80px;
 }
 
-/* ── 仪器读数 meta bar ──────────────────────────────────────
-   单条分割线做页头与列表之间的唯一分隔（P2：删除双分割线）
-*/
+/* content 层叠在固定 star-field SVG 上方 */
+.overview__content {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── meta bar ──────────────────────────────────────────────── */
+
 .overview__meta-bar {
   display: flex;
   justify-content: space-between;
@@ -37,22 +41,23 @@
 /* ── 页头 ──────────────────────────────────────────────────── */
 
 .overview__eyebrow {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 300;
-  font-size: var(--font-size-base);
-  letter-spacing: 0.08em;
-  color: var(--color-text-muted);
+  font-family: 'EB Garamond', 'Noto Serif SC', serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: var(--font-size-lg);
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
   margin-bottom: var(--space-3);
 }
 
 .overview__heading {
-  font-family: var(--font-display);
-  font-weight: 300;
+  font-family: var(--font-heading);
+  font-weight: normal;
   font-size: var(--font-size-3xl);
-  color: var(--color-text-primary);
+  color: rgba(232, 237, 245, 0.78);
   line-height: var(--line-height-tight);
   letter-spacing: -0.01em;
+  margin-top: var(--space-2);
 }
 
 /* ── 事件列表 ─────────────────────────────────────────────── */
@@ -60,35 +65,61 @@
 .event-list {
   margin-top: var(--space-12);
   list-style: none;
-  /* P2：移除 ::before 双分割线；meta-bar 的 border-bottom 已作为唯一顶部分隔 */
 }
 
-/* ── 单条事件行
-   grid: [序号 3ch] [内容 1fr] [类型/指示符 auto]
-*/
-.event-item {
+/* ── 入场动画 ─────────────────────────────────────────────── */
+
+@keyframes itemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.event-item,
+.upcoming-header {
+  animation: itemEnter 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Active（可点击）事件行 ────────────────────────────────── */
+
+.event-item--active {
   position: relative;
-  border-bottom: 1px solid var(--color-border-subtle);
   display: grid;
   grid-template-columns: 3ch 1fr auto;
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto auto auto;
   column-gap: var(--space-6);
-  row-gap: var(--space-3); /* 从 space-2 放宽到 space-3，提升扫读舒适度 */
+  row-gap: var(--space-3);
   align-items: start;
-  /* P1：加 background 过渡，支持 active hover */
+  padding: var(--space-8) 0 var(--space-8) 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  cursor: pointer;
   transition: background var(--transition-fast);
 }
 
-/* ── Active（可点击）行 ─────────────────────────────────────── */
-
-.event-item--active {
-  padding: var(--space-8) 0;
-  cursor: pointer;
+/* 左侧 1px accent 竖线——静止即可见 */
+.event-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 1px;
+  background: var(--color-accent);
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
 }
 
-/* P1：背景微亮提升，使用 surface token 而非硬编码颜色 */
 .event-item--active:hover {
   background: var(--color-bg-surface);
+}
+
+.event-item--active:hover::before {
+  opacity: 1;
 }
 
 .event-item--active:hover .event-item__name {
@@ -100,45 +131,73 @@
   opacity: 1;
 }
 
-/* ── Coming-soon（锁定）行 ──────────────────────────────────
-   P0：「teased」处理——明确锁定感，而非「损坏」感
-   · opacity 提升到 0.45（原 0.36），内容可读，锁定图标传达意图
-   · cursor: not-allowed 立刻告知用户「有意锁定」
-   · hover 给轻微反馈，证明系统在响应，但不可触发
-*/
-.event-item--coming-soon {
-  padding: var(--space-6) 0;
-  opacity: 0.45;
-  cursor: not-allowed;
-  transition: opacity var(--transition-fast);
+.event-item--active:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 4px;
 }
 
-.event-item--coming-soon:hover {
-  opacity: 0.6;
-}
+/* ── 子元素：行 1（名称 + 类型） ───────────────────────────── */
 
-/* hover 时 label 微微提亮 */
-.event-item--coming-soon:hover .event-item__coming-soon-label {
-  color: var(--color-text-secondary);
-}
+/* ── 左侧时间轴列 ──────────────────────────────────────────── */
 
-/* ── 子元素 ────────────────────────────────────────────────── */
-
-/* 序号（01 / 02 / 03）——星历表视觉纹理 */
 .event-item__index {
   font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   color: var(--color-text-muted);
-  letter-spacing: 0.02em;
-  padding-top: 4px; /* 与 Spectral 大写基线视觉对齐 */
+  letter-spacing: 0.04em;
   grid-column: 1;
-  grid-row: 1 / 4;
-  align-self: start;
+  grid-row: 1 / 5;
+  align-self: stretch;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding-top: 2px;
+  position: relative;
 }
 
-/* 事件名称 → Spectral (display serif) */
+/* 圆点：active = 实心 accent；upcoming = 空心 muted */
+.event-item__index::before {
+  content: '';
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.event-item--active .event-item__index::before {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  opacity: 0.85;
+  width: 6px;
+  height: 6px;
+}
+
+/* 星轨虚线：从本行底部延伸向下，连接下一行 */
+.event-item__index::after {
+  content: '';
+  flex: 1;
+  width: 1px;
+  min-height: 12px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.10) 0px,
+    rgba(255, 255, 255, 0.10) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+}
+
+/* 最后一个 upcoming 行不需要拖尾线 */
+.event-list--upcoming .event-item:last-child .event-item__index::after {
+  display: none;
+}
+
 .event-item__name {
-  font-family: var(--font-display);
+  font-family: 'EB Garamond', 'JingHuaOldSong', 'Noto Serif SC', serif;
   font-weight: 400;
   font-size: var(--font-size-xl);
   color: var(--color-text-primary);
@@ -148,52 +207,63 @@
   grid-row: 1;
 }
 
-/* 类型标签 → DM Sans（分类元数据） */
 .event-item__type {
   font-family: var(--font-sans);
   font-size: var(--font-size-xs);
-  font-weight: 400;
   letter-spacing: var(--letter-spacing-wider);
   color: var(--color-text-muted);
   align-self: center;
+  white-space: nowrap;
   grid-column: 3;
   grid-row: 1;
-  white-space: nowrap;
 }
 
-/* P2：时间段降级为 caption 层级 → 与 summary 形成明确层级
-   DM Sans（时间段是文字标签，非数据字符串）+ muted + xs */
-.event-item__period {
-  font-family: var(--font-sans);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  grid-column: 2;
+/* ── 行 2：日期轴 ──────────────────────────────────────────── */
+
+.event-item__date-axis {
+  grid-column: 2 / 4;
   grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
-/* 观测条件摘要（含数字）→ Geist Mono（数字数据规则）
-   P2：保持 secondary + sm，作为有效的第二层信息 */
-.event-item__summary {
+.event-item__date-label {
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  letter-spacing: 0.02em;
-  grid-column: 2;
-  grid-row: 3;
-}
-
-/* 即将上线标签 */
-.event-item__coming-soon-label {
-  font-family: var(--font-sans);
-  font-size: var(--font-size-xs);
   color: var(--color-text-muted);
-  letter-spacing: var(--letter-spacing-wide);
-  transition: color var(--transition-fast);
-  grid-column: 2;
-  grid-row: 3;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
 }
 
-/* 进入箭头（active）→ hover 右移 */
+.event-item__axis-track {
+  flex: 1;
+  position: relative;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* 今日游标 */
+.event-item__axis-cursor {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 5px rgba(91, 141, 217, 0.55);
+}
+
+/* ── 行 3：状态摘要 + 箭头 ─────────────────────────────────── */
+
+.event-item__summary-row {
+  grid-column: 2;
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+}
+
 .event-item__arrow {
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
@@ -201,31 +271,149 @@
   opacity: 0.4;
   transition: transform var(--transition-fast), opacity var(--transition-fast);
   grid-column: 3;
-  grid-row: 2 / 4;
+  grid-row: 3;
   align-self: center;
   justify-self: end;
 }
 
-/* P0：锁定符号（coming-soon）
-   ○ 圆圈：「此位置已预留，尚未开放」——天文观测日志中空格的视觉语言 */
-.event-item__lock {
+/* 呼吸点：表示数据为当前有效值 */
+@keyframes breathe {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+}
+
+.event-item__pulse-dot {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  margin-right: 8px;
+  animation: breathe 9s ease-in-out infinite;
+  animation-delay: 1.4s;
+}
+
+.event-item__summary {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+}
+
+/* ── 行 4：星历读数条 ──────────────────────────────────────── */
+
+.event-item__ephemeris {
+  grid-column: 2 / 4;
+  grid-row: 4;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+  letter-spacing: 0.025em;
+  padding-top: var(--space-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ── 排程段落头 ───────────────────────────────────────────── */
+
+.upcoming-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.upcoming-header::before {
+  content: '';
+  flex: 0 0 20px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.07);
+}
+
+.upcoming-header::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed rgba(255, 255, 255, 0.07);
+}
+
+.upcoming-header__label {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Upcoming（排程）事件行 ────────────────────────────────── */
+
+.event-list--upcoming {
+  margin-top: 0;
+}
+
+.event-item--upcoming {
+  display: grid;
+  grid-template-columns: 3ch 1fr auto;
+  column-gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-4) 0 var(--space-4) 14px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.055);
+  cursor: default;
+}
+
+.event-item--upcoming .event-item__index {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  padding-top: 2px;
+}
+
+.event-item--upcoming .event-item__type {
   grid-column: 3;
-  grid-row: 1 / 4;
+  grid-row: 1;
   align-self: center;
-  justify-self: end;
-  transition: color var(--transition-fast);
-  user-select: none;
 }
 
-.event-item--coming-soon:hover .event-item__lock {
-  color: var(--color-text-secondary);
+.event-item__upcoming-row {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
 }
 
-/* 焦点样式（键盘导航）——移除 border-radius，保持线条感 */
-.event-item--active:focus-visible {
-  outline: 1px solid var(--color-accent);
-  outline-offset: 4px;
+.event-item__period-short {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* override active-item name size/color for upcoming context */
+.event-item--upcoming .event-item__name {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  transition: none;
+  grid-column: unset;
+  grid-row: unset;
+}
+
+/* ── reduced motion ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .event-item,
+  .upcoming-header {
+    animation: none;
+  }
+
+  .event-item__pulse-dot {
+    animation: none;
+    opacity: 0.65;
+  }
 }

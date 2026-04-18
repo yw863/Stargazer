@@ -1,0 +1,1115 @@
+/* ── 视图三：推荐结果 ─────────────────────────────────────────────
+   字体分配（沿用前两视图约定）：
+   · JingHuaOldSong / Spectral → 事件名、地点名
+   · DM Sans                  → 标签、辅助说明、表头
+   · Geist Mono               → 所有数字读数
+*/
+
+/* ── 容器 + 背景深度 ──────────────────────────────────────────────── */
+
+.results {
+  padding-top: 72px;
+  padding-bottom: 80px;
+  position: relative;
+}
+
+
+/* ── Meta bar ────────────────────────────────────────────────────── */
+
+.results__meta-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+  margin-bottom: var(--space-8);
+}
+
+.results__meta-bar span {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.04em;
+}
+
+/* ── 事件锚条 ────────────────────────────────────────────────────── */
+
+.results__anchor {
+  position: relative;
+  padding: var(--space-6) 0 var(--space-6) 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: var(--space-8);
+}
+
+.results__anchor::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: var(--color-accent);
+  opacity: 0.65;
+}
+
+.results__back {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+  margin-right: var(--space-4);
+  vertical-align: middle;
+}
+
+.results__back:hover {
+  color: var(--color-accent);
+  transform: translateX(-3px);
+}
+
+.results__back:focus-visible {
+  outline: 1px solid var(--color-accent);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.results__anchor-info {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-4);
+}
+
+.results__anchor-name {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  font-size: var(--font-size-xl);
+  color: rgba(232, 237, 245, 0.78);
+  line-height: var(--line-height-tight);
+}
+
+.results__anchor-tag {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wider);
+  color: rgba(255, 255, 255, 0.48);
+}
+
+.results__ephem {
+  margin-top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.52);
+  letter-spacing: 0.025em;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: var(--space-3);
+}
+
+/* ── D1: 古典印刷装饰片 ───────────────────────────────────────────── */
+
+.print-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--space-6) 0;
+}
+
+.print-divider__line {
+  flex: 1;
+  display: block;
+  border-top: 1px solid rgba(91, 141, 217, 0.22);
+}
+
+.print-divider__cross {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(91, 141, 217, 0.58);
+  letter-spacing: 0;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* ── Summary Masthead ────────────────────────────────────────────── */
+
+.summary {
+  padding: var(--space-8) 0 var(--space-6) 0;
+}
+
+.summary__hero {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+  margin-bottom: var(--space-6);
+}
+
+.summary__date-block {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+/* 日期：中号 mono，与其余读数保持同层级 */
+.summary__date-num {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 400;
+  color: rgba(232, 237, 245, 0.82);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.summary__date-wd {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.52);
+  letter-spacing: 0.06em;
+  align-self: flex-end;
+  margin-bottom: 0.1em;
+}
+
+.summary__mag-block {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-bottom: 0.2em;
+}
+
+.summary__mag-val {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  color: rgba(232, 237, 245, 0.82);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.summary__mag-unit {
+  font-family: var(--font-sans);
+  font-style: italic;
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.50);
+  margin-right: var(--space-3);
+}
+
+/* ── D2: 星等刻度条 ──────────────────────────────────────────────── */
+
+.mag-scale {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 56px;
+  align-self: flex-end;
+  margin-bottom: 0.3em;
+}
+
+.mag-scale__track {
+  position: relative;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  width: 100%;
+}
+
+.mag-scale__tick {
+  position: absolute;
+  top: -2px;
+  width: 1px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateX(-50%);
+}
+
+.mag-scale__cursor {
+  position: absolute;
+  top: -3px;
+  width: 1px;
+  height: 7px;
+  background: var(--color-accent);
+  transform: translateX(-50%);
+}
+
+.mag-scale__labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.30);
+  letter-spacing: 0.02em;
+}
+
+/* ── Summary rule (短 hairline 排版事件) ─────────────────────────── */
+
+.summary__rule {
+  width: 14ch;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 0 0 var(--space-5) 0;
+}
+
+/* ── Summary readout lines ─────────────────────────────────────────*/
+
+.summary__readouts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.summary__readout-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+}
+
+/* 标签：清晰可读 */
+.summary__label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* 值：明显比标签亮 */
+.summary__val {
+  color: rgba(232, 237, 245, 0.85);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.02em;
+}
+
+.summary__sep {
+  color: rgba(255, 255, 255, 0.30);
+  user-select: none;
+}
+
+.summary__readout-line--window .summary__label {
+  color: rgba(255, 255, 255, 0.38);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.04em;
+}
+
+.summary__window-val {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: var(--color-accent);
+  letter-spacing: 0.03em;
+}
+
+.summary__window-dash {
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0;
+}
+
+/* ── D3: 月相小圆 ────────────────────────────────────────────────── */
+
+.moon-phase {
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+/* ── Ephemeris Strip ──────────────────────────────────────────────── */
+
+.ephem-strip {
+  margin: var(--space-4) 0 var(--space-6) 0;
+  position: relative;
+  overflow: visible;
+}
+
+/* 轨道：44px 上方留给普通刻度，32px 下方留给 window/peak 刻度 */
+.ephem-strip__track {
+  position: relative;
+  height: 76px;
+}
+
+/* hairline 定在距顶部 44px 处 */
+.ephem-strip__hairline {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  height: 0.5px;
+  background: rgba(91, 141, 217, 0.28);
+}
+
+.ephem-strip__window-seg {
+  position: absolute;
+  top: 44px;
+  height: 1px;
+  background: var(--color-accent);
+  opacity: 0.85;
+}
+
+.ephem-strip__moon-seg {
+  position: absolute;
+  top: 48px;
+  height: 1px;
+  border-top: 1px dashed rgba(201, 149, 74, 0.40);
+}
+
+/* D4: window bracket markers — 跨骑 hairline */
+.ephem-strip__bracket {
+  position: absolute;
+  top: 41px;
+  width: 1px;
+  height: 7px;
+  background: var(--color-accent);
+  opacity: 0.75;
+  transform: translateX(-50%);
+}
+
+.ephem-strip__bracket::before,
+.ephem-strip__bracket::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 1px;
+  background: var(--color-accent);
+  opacity: 0.75;
+}
+
+.ephem-strip__bracket--open::before  { top: 0; left: 0; }
+.ephem-strip__bracket--open::after   { bottom: 0; left: 0; }
+.ephem-strip__bracket--close::before { top: 0; right: 0; }
+.ephem-strip__bracket--close::after  { bottom: 0; right: 0; }
+
+/* 所有刻度顶边对齐 hairline（top: 44px）
+   普通刻度用 translateY(-100%) 把容器整体上移，底边贴 hairline，向上生长 */
+.ephem-strip__tick {
+  position: absolute;
+  top: 44px;
+  transform: translateX(-50%) translateY(-100%);
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 3px;
+}
+
+/* window / peak 刻度：不上移，顶边贴 hairline，向下生长 */
+.ephem-strip__tick--window,
+.ephem-strip__tick--peak {
+  transform: translateX(-50%);
+  flex-direction: column;
+}
+
+.ephem-strip__tick-mark {
+  display: block;
+  width: 1px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.40);
+}
+
+.ephem-strip__tick--window .ephem-strip__tick-mark,
+.ephem-strip__tick--peak .ephem-strip__tick-mark {
+  background: var(--color-accent);
+  height: 8px;
+}
+
+.ephem-strip__tick--solar .ephem-strip__tick-mark {
+  background: rgba(201, 149, 74, 0.55);
+}
+
+.ephem-strip__tick-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.ephem-strip__tick-label {
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.60);
+  white-space: nowrap;
+}
+
+.ephem-strip__tick--window .ephem-strip__tick-time,
+.ephem-strip__tick--peak .ephem-strip__tick-time {
+  color: var(--color-accent);
+}
+
+.ephem-strip__tick--window .ephem-strip__tick-label,
+.ephem-strip__tick--peak .ephem-strip__tick-label {
+  color: rgba(91, 141, 217, 0.70);
+}
+
+/* ── Date Tabs ───────────────────────────────────────────────────── */
+
+.date-tabs {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-4) 0 var(--space-6) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: var(--space-8);
+}
+
+.date-tab {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  position: relative;
+  transition: opacity var(--transition-fast);
+}
+
+.date-tab:hover { opacity: 0.85; }
+
+.date-tab__index {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.40);
+  letter-spacing: 0.04em;
+}
+
+.date-tab__date {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.03em;
+}
+
+.date-tab__wd {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.40);
+  letter-spacing: 0.06em;
+}
+
+/* 激活态 */
+.date-tab--active .date-tab__date {
+  color: rgba(232, 237, 245, 0.90);
+}
+
+.date-tab--active .date-tab__index,
+.date-tab--active .date-tab__wd {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.date-tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--color-accent);
+}
+
+.date-tab--warning .date-tab__date {
+  color: var(--color-warning);
+}
+
+.date-tab__warn-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+/* ── Abstract Map ────────────────────────────────────────────────── */
+
+.results__map-section {
+  margin-bottom: 0;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-bottom: none;
+  overflow: hidden;
+  background: var(--color-bg-base);
+}
+
+.abstract-map {
+  width: 100%;
+  aspect-ratio: 16 / 6;
+  background:
+    radial-gradient(ellipse 80% 100% at 65% 50%, rgba(91, 141, 217, 0.04) 0%, transparent 70%),
+    var(--color-bg-base);
+  position: relative;
+}
+
+.abstract-map__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* D2: 坐标网格暗纹 */
+.abstract-map__grid line {
+  stroke: rgba(255, 255, 255, 0.055);
+  stroke-width: 0.5;
+}
+
+/* 长江、海岸线 */
+.abstract-map__river {
+  fill: none;
+  stroke: rgba(91, 141, 217, 0.22);
+  stroke-width: 1.2;
+}
+
+.abstract-map__coast {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 0.8;
+  stroke-dasharray: 3 2;
+}
+
+.abstract-map__city-dot {
+  fill: rgba(255, 255, 255, 0.28);
+}
+
+.abstract-map__city-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: rgba(255, 255, 255, 0.50);
+  dominant-baseline: middle;
+}
+
+/* 候选地点 */
+.abstract-map__loc-group {
+  cursor: pointer;
+}
+
+.abstract-map__loc-ring {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 0.8;
+  opacity: 0.55;
+  transition: r 200ms ease, opacity 200ms ease;
+}
+
+.abstract-map__loc-ring--active {
+  opacity: 0.95;
+  stroke-width: 1.2;
+}
+
+.abstract-map__loc-ring--expanded {
+  fill: rgba(91, 141, 217, 0.12);
+}
+
+.abstract-map__loc-dot {
+  fill: rgba(255, 255, 255, 0.45);
+  transition: fill 200ms ease;
+}
+
+.abstract-map__loc-dot--active {
+  fill: var(--color-accent);
+}
+
+.abstract-map__loc-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: rgba(91, 141, 217, 0.70);
+  text-anchor: middle;
+  dominant-baseline: auto;
+}
+
+/* 用户位置十字标 */
+.abstract-map__user line {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.8;
+}
+
+.abstract-map__user-label {
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  fill: rgba(255, 255, 255, 0.38);
+  dominant-baseline: middle;
+}
+
+/* ── Compare Table ───────────────────────────────────────────────── */
+
+.ctable {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+  /* 极淡底面，与页面背景区分 */
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.ctable__row {
+  display: grid;
+  grid-template-columns: 36px 1fr 58px 76px 66px 56px 60px 96px 24px;
+  align-items: center;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  position: relative;
+  min-height: 44px;
+}
+
+/* 极淡斑马纹 */
+.ctable__row:nth-child(even):not(.ctable__row--head) {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.ctable__row--head {
+  cursor: default;
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  min-height: unset;
+  border-bottom: 1px solid rgba(91, 141, 217, 0.28);
+}
+
+.ctable__row:not(.ctable__row--head):hover,
+.ctable__row--hovered:not(.ctable__row--head) {
+  background: var(--color-accent-glow);
+}
+
+.ctable__row:not(.ctable__row--head):hover::before,
+.ctable__row--expanded::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-accent);
+  opacity: 0.8;
+}
+
+.ctable__row--expanded {
+  background: rgba(91, 141, 217, 0.08);
+}
+
+/* 表头 */
+.ctable__th {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.58);
+  padding: var(--space-3) 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ctable__th--name,
+.ctable__th--transit {
+  letter-spacing: 0.05em;
+}
+
+.ctable__th-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: color var(--transition-fast);
+}
+
+.ctable__th-btn:hover { color: rgba(255, 255, 255, 0.78); }
+.ctable__th-btn--active { color: var(--color-accent); }
+
+.ctable__sort-arrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--color-accent);
+}
+
+/* 单元格 */
+.ctable__cell {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: rgba(255, 255, 255, 0.68);
+  padding: var(--space-3) 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ctable__cell--mono {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.02em;
+}
+
+.ctable__cell--right { text-align: right; }
+.ctable__cell--center { text-align: center; }
+.ctable__cell--name { padding-right: var(--space-3); }
+
+/* 地点名 */
+.ctable__loc-name {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  color: rgba(232, 237, 245, 0.88);
+}
+
+.ctable__transit-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+/* D6: 展开指示器 */
+.ctable__cell--expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ctable__expand-icon {
+  display: block;
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: transform 220ms ease;
+  transform-origin: center;
+}
+
+/* 旋转 90° 将竖线变为横线，不改变尺寸（改尺寸会抵消旋转效果） */
+.ctable__expand-icon--open {
+  transform: rotate(90deg);
+}
+
+/* ── D7: Rank Badge ──────────────────────────────────────────────── */
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+}
+
+.rank-badge--1 {
+  background: var(--color-accent);
+  color: #080c14;
+}
+
+.rank-badge--2 {
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  background: transparent;
+}
+
+.rank-badge--3 {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.55);
+  background: transparent;
+}
+
+.rank-badge--other {
+  color: rgba(255, 255, 255, 0.30);
+  background: transparent;
+}
+
+/* ── Score Scale ─────────────────────────────────────────────────── */
+
+.score-scale {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.score-scale__num {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: rgba(232, 237, 245, 0.72);
+  letter-spacing: 0.02em;
+  min-width: 2ch;
+  text-align: right;
+}
+
+.score-scale__track {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  position: relative;
+  overflow: hidden;
+}
+
+.score-scale__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(91, 141, 217, 0.52);
+  transition: width var(--transition-base);
+}
+
+/* ── Plan Card ───────────────────────────────────────────────────── */
+
+.ctable__plan-wrap {
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ctable__plan-wrap::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-accent);
+  opacity: 0.38;
+}
+
+.plan-card {
+  padding: var(--space-6) var(--space-8) var(--space-6) var(--space-8);
+  animation: planCardIn 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes planCardIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.plan-card__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.plan-card__section--row {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.plan-card__section-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.plan-card__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: var(--space-5) 0;
+}
+
+/* 交通路线 */
+.plan-card__transit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.plan-card__route {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.plan-card__route-mode {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.plan-card__route-time {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: rgba(232, 237, 245, 0.85);
+  letter-spacing: 0.02em;
+}
+
+.plan-card__route-summary {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.02em;
+}
+
+/* AzEl polar + window layout */
+.plan-card__polar-wrap {
+  flex-shrink: 0;
+}
+
+.plan-card__window-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+}
+
+.plan-card__window-readout {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.plan-card__window-time {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  color: var(--color-accent);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.plan-card__window-sep {
+  color: rgba(255, 255, 255, 0.25);
+  letter-spacing: 0;
+}
+
+.plan-card__window-dur {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.03em;
+}
+
+.plan-card__window-dir {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.02em;
+}
+
+.plan-card__readout-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.plan-card__dot-sep {
+  color: rgba(255, 255, 255, 0.22);
+}
+
+.plan-card__notes {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+}
+
+/* ── D5: AzEl Polar Chart ────────────────────────────────────────── */
+
+.azelpolar {
+  display: block;
+}
+
+.azelpolar__outer {
+  fill: none;
+  stroke: rgba(91, 141, 217, 0.35);
+  stroke-width: 0.8;
+}
+
+.azelpolar__ring {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.10);
+  stroke-width: 0.5;
+}
+
+.azelpolar__tick--major {
+  stroke: rgba(255, 255, 255, 0.40);
+  stroke-width: 0.8;
+}
+
+.azelpolar__tick--minor {
+  stroke: rgba(255, 255, 255, 0.20);
+  stroke-width: 0.5;
+}
+
+.azelpolar__tick--small {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 0.5;
+}
+
+.azelpolar__dir-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: rgba(255, 255, 255, 0.65);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.azelpolar__el-label {
+  font-family: var(--font-mono);
+  font-size: 6px;
+  fill: rgba(255, 255, 255, 0.45);
+  dominant-baseline: auto;
+}
+
+.azelpolar__path-full {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 2;
+}
+
+.azelpolar__path-window {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.azelpolar__dot {
+  fill: rgba(255, 255, 255, 0.30);
+}
+
+.azelpolar__dot--window {
+  fill: var(--color-accent);
+  opacity: 0.85;
+}
+
+.azelpolar__peak {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+}
+
+.azelpolar__peak-label {
+  font-family: var(--font-mono);
+  font-size: 7px;
+  fill: rgba(91, 141, 217, 0.72);
+  dominant-baseline: middle;
+}
+
+/* ── D8: Page footer stamp ───────────────────────────────────────── */
+
+.results__stamp {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.50);
+  letter-spacing: 0.06em;
+  text-align: center;
+  display: block;
+  padding: var(--space-4) 0;
+  user-select: none;
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .results { animation: none; }
+  .plan-card { animation: none; }
+  .ctable__expand-icon { transition: none; }
+  .score-scale__fill { transition: none; }
+  .abstract-map__loc-ring,
+  .abstract-map__loc-dot { transition: none; }
+}

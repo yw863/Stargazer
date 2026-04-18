@@ -58,6 +58,15 @@ button {
   justify-content: center;
 }
 
+/* 结果视图：背景渐变铺满整个视口 */
+.app-container--results {
+  background:
+    radial-gradient(ellipse 110% 55% at 30% 0%, rgba(91, 141, 217, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 45% at 85% 88%, rgba(91, 141, 217, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 35% at 5% 55%, rgba(91, 141, 217, 0.04) 0%, transparent 45%),
+    var(--color-bg-base);
+}
+
 .page-main {
   width: 100%;
   max-width: 720px;
@@ -77,6 +86,8 @@ button {
 }
 
 .view-enter {
+  position: relative;
+  z-index: 1;
   animation: viewEnter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

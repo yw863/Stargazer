@@ -22,7 +22,7 @@ function App() {
   }
 
   return (
-    <div className="app-container">
+    <div className={`app-container app-container--${view}`}>
       <main className="page-main">
         {/* key 变化触发 CSS 入场动画 */}
         <div key={view} className="view-enter">
@@ -37,7 +37,7 @@ function App() {
             />
           )}
           {view === 'results' && (
-            <ResultsView onBack={handleBackToOverview} />
+            <ResultsView event={selectedEvent} onBack={handleBackToOverview} />
           )}
         </div>
       </main>
