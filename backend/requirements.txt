@@ -2,3 +2,5 @@ numpy>=1.26
 scipy>=1.12
 requests>=2.31
 python-dotenv>=1.0
+skyfield>=1.46
+pytest>=8.0

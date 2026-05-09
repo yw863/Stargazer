@@ -135,3 +135,260 @@ if __name__ == "__main__":
     import sys
     sample = sys.argv[1] if len(sys.argv) > 1 else "data/horizons_sample.json"
     _run_tests(sample)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Horizons 查询 B：topocentric AZ/EL（用户触发，实时查询）
+# ══════════════════════════════════════════════════════════════════════════════
+
+import time as _time_module
+from datetime import date as _date_cls, datetime as _dt_cls, timedelta as _td
+
+import requests as _requests
+
+_HORIZONS_BASE = "https://ssd.jpl.nasa.gov/api/horizons.api"
+
+# Matches AZ/EL rows from Horizons OBSERVER table (Quantities=4).
+# Format: "YYYY-Mon-DD HH:MM [flags]   AZ   EL"
+# Flags are optional 0-2 chars (A, N, Cr, *, etc.) or absent.
+_AZ_EL_ROW_RE = re.compile(
+    r"^\s*(\d{4}-[A-Za-z]{3}-\d{2})\s+(\d{2}:\d{2})\s+\S*\s+([\d.]+)\s+([-\d.]+)"
+)
+
+
+def _az_el_to_minutes(time_str: str) -> int:
+    """Convert "HH:MM" to total minutes since midnight."""
+    return int(time_str[:2]) * 60 + int(time_str[3:5])
+
+
+def _minutes_to_hhmm(total: int) -> str:
+    """Convert integer minutes (may exceed 1440) to "HH:MM", clamped to 24h."""
+    total = total % (24 * 60)
+    return f"{total // 60:02d}:{total % 60:02d}"
+
+
+def parse_az_el_response(
+    response: dict[str, Any],
+    utc_offset_hours: int = 0,
+) -> list[dict[str, Any]]:
+    """
+    Parse Horizons AZ/EL observer table (Quantities=4).
+
+    Args:
+        response: Horizons API JSON response dict containing "result".
+        utc_offset_hours: Add this to UTC times to obtain local times
+            (e.g. 8 for China Standard Time).
+
+    Returns:
+        Chronologically sorted list of records::
+
+            [{"time": "HH:MM", "az": float, "el": float}, ...]
+
+        where ``time`` is local time (HH:MM, 24h) and midnight-crossing
+        is handled correctly.
+
+    Raises:
+        KeyError: "result" key absent.
+        ValueError: $$SOE/$$EOE markers missing, or no valid rows found.
+    """
+    result_text: str = response["result"]
+    soe_idx = result_text.find("$$SOE")
+    eoe_idx = result_text.find("$$EOE")
+    if soe_idx == -1 or eoe_idx == -1:
+        raise ValueError("Horizons 响应中未找到 $$SOE / $$EOE 标记")
+
+    table_block = result_text[soe_idx + len("$$SOE"):eoe_idx]
+    records: list[dict[str, Any]] = []
+
+    for line in table_block.splitlines():
+        m = _AZ_EL_ROW_RE.match(line)
+        if not m:
+            continue
+        _date_str, time_utc, az_str, el_str = m.groups()
+
+        if utc_offset_hours:
+            total_min = _az_el_to_minutes(time_utc) + utc_offset_hours * 60
+            local_time = _minutes_to_hhmm(total_min)
+        else:
+            local_time = time_utc
+
+        records.append({
+            "time": local_time,
+            "az":   round(float(az_str), 1),
+            "el":   round(float(el_str), 1),
+        })
+
+    if not records:
+        raise ValueError("未从 Horizons AZ/EL 响应中解析到任何行，请检查 QUANTITIES='4' 配置")
+
+    return records
+
+
+def extract_target_passage(az_el_data: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Extract rise/peak/set from a chronological AZ/EL time series.
+
+    The function uses linear interpolation to estimate the exact minute when
+    the target's elevation crosses 0°.
+
+    Args:
+        az_el_data: List of ``{"time": "HH:MM", "az": float, "el": float}``
+            records in chronological order (local time).  Midnight-crossing
+            sequences are supported.
+
+    Returns:
+        ``{"rise_time", "peak_time", "set_time", "peak_altitude_deg"}``
+
+        All time values are ``"HH:MM"`` strings (local time, 24h).
+        Fields are ``None`` when the event does not occur within the data
+        window; a ``"note"`` key is added with a human-readable explanation.
+
+    Edge cases handled:
+        - Target never rises  → ``rise_time``, ``peak_time``, ``set_time`` all ``None``
+        - Already above horizon at window start → ``rise_time`` is ``None``
+        - Never sets within window → ``set_time`` is ``None``
+    """
+    if not az_el_data:
+        return {
+            "rise_time": None, "peak_time": None,
+            "set_time": None, "peak_altitude_deg": None,
+            "note": "AZ/EL 数据为空",
+        }
+
+    # Build a monotonically increasing minutes sequence to handle midnight crossing.
+    mono: list[tuple[int, float, float]] = []   # (minutes, az, el)
+    prev_min = -1
+    day_offset = 0
+    for rec in az_el_data:
+        m = _az_el_to_minutes(rec["time"])
+        if m < prev_min:      # midnight wrap detected
+            day_offset += 24 * 60
+        mono.append((m + day_offset, rec["az"], rec["el"]))
+        prev_min = m
+
+    els = [p[2] for p in mono]
+    max_el = max(els)
+
+    if max_el <= 0:
+        return {
+            "rise_time": None, "peak_time": None,
+            "set_time": None, "peak_altitude_deg": None,
+            "note": "目标在整个查询窗口内均低于地平线",
+        }
+
+    note_parts: list[str] = []
+
+    # ── Rise time ──────────────────────────────────────────────────────────
+    rise_min: int | None = None
+    if mono[0][2] > 0:
+        note_parts.append("查询窗口开始时目标已在地平线以上，升起时间未捕获")
+    else:
+        for i in range(len(mono) - 1):
+            el_a, el_b = mono[i][2], mono[i + 1][2]
+            if el_a <= 0 < el_b:
+                frac = -el_a / (el_b - el_a)
+                rise_min = int(round(mono[i][0] + frac * (mono[i + 1][0] - mono[i][0])))
+                break
+
+    # ── Peak ───────────────────────────────────────────────────────────────
+    peak_idx = max(range(len(els)), key=lambda i: els[i])
+    peak_min = mono[peak_idx][0]
+    peak_el  = round(els[peak_idx], 1)
+
+    # ── Set time ───────────────────────────────────────────────────────────
+    set_min: int | None = None
+    for i in range(peak_idx, len(mono) - 1):
+        el_a, el_b = mono[i][2], mono[i + 1][2]
+        if el_a >= 0 > el_b:
+            frac = el_a / (el_a - el_b)
+            set_min = int(round(mono[i][0] + frac * (mono[i + 1][0] - mono[i][0])))
+            break
+    if set_min is None and mono[-1][2] > 0:
+        note_parts.append("目标在查询窗口结束时仍在地平线以上，落下时间未捕获")
+
+    result: dict[str, Any] = {
+        "rise_time":         _minutes_to_hhmm(rise_min) if rise_min is not None else None,
+        "peak_time":         _minutes_to_hhmm(peak_min),
+        "set_time":          _minutes_to_hhmm(set_min)  if set_min  is not None else None,
+        "peak_altitude_deg": peak_el,
+    }
+    if note_parts:
+        result["note"] = "；".join(note_parts)
+    return result
+
+
+def query_horizons_topocentric(
+    command: str,
+    latitude: float,
+    longitude: float,
+    date: str,
+    timezone_offset: int = 8,
+    step_size: str = "30m",
+    timeout: int = 10,
+    max_retries: int = 2,
+) -> list[dict[str, Any]]:
+    """
+    Query Horizons for apparent AZ/EL of a target seen from a ground location.
+
+    Queries one night: from 17:00 local time (approximately civil twilight)
+    to 07:00 local time the following morning.
+
+    Args:
+        command:          Horizons target designation, e.g. ``"C/2025 R3"``.
+        latitude:         Observer latitude in decimal degrees (north positive).
+        longitude:        Observer longitude in decimal degrees (east positive).
+        date:             Local observation date, ISO format ``"YYYY-MM-DD"``.
+        timezone_offset:  UTC offset in integer hours (default 8 for CST).
+        step_size:        Horizons STEP_SIZE parameter (default ``"30m"``).
+        timeout:          HTTP request timeout in seconds.
+        max_retries:      Number of additional attempts on transient failure.
+
+    Returns:
+        Chronologically sorted list of ``{"time": "HH:MM", "az": float, "el": float}``
+        records in local time.
+
+    Raises:
+        requests.HTTPError: Non-transient HTTP error.
+        ValueError: Response parsing failed.
+    """
+    date_obj = _date_cls.fromisoformat(date)
+
+    # UTC window: 17:00 local → 07:00 local next day, expressed as UTC offsets
+    # from midnight of the local date converted to UTC reference.
+    start_utc_h = 17 - timezone_offset   # hours from local-date midnight (UTC)
+    stop_utc_h  = 31 - timezone_offset   # 07:00 next local day from same reference
+
+    def _fmt(base: _date_cls, extra_h: int) -> str:
+        dt = _dt_cls(base.year, base.month, base.day) + _td(hours=extra_h)
+        return dt.strftime("%Y-%m-%d %H:%M")
+
+    start_str = _fmt(date_obj, start_utc_h)
+    stop_str  = _fmt(date_obj, stop_utc_h)
+
+    params = {
+        "format":       "json",
+        "COMMAND":      f"'{command}'",
+        "CENTER":       "'coord'",
+        "SITE_COORD":   f"'{longitude},{latitude},0'",
+        "COORD_TYPE":   "'GEODETIC'",
+        "MAKE_EPHEM":   "YES",
+        "TABLE_TYPE":   "OBSERVER",
+        "START_TIME":   f"'{start_str}'",
+        "STOP_TIME":    f"'{stop_str}'",
+        "STEP_SIZE":    f"'{step_size}'",
+        "QUANTITIES":   "'4'",
+    }
+
+    for attempt in range(max_retries + 1):
+        try:
+            resp = _requests.get(_HORIZONS_BASE, params=params, timeout=timeout)
+            resp.raise_for_status()
+            data = resp.json()
+            if "result" not in data:
+                raise ValueError(f"Horizons 响应缺少 result 字段：{list(data.keys())}")
+            return parse_az_el_response(data, utc_offset_hours=timezone_offset)
+        except (_requests.Timeout, _requests.ConnectionError) as exc:
+            if attempt == max_retries:
+                raise
+            wait = 2 ** attempt
+            _time_module.sleep(wait)

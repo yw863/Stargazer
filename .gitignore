@@ -10,6 +10,9 @@ frontend/.env.local
 
 # 每日拟合缓存由 GitHub Actions 自动更新并 commit 回仓库，不在此忽略
 
+# skyfield 星历数据文件（大型二进制，首次运行自动下载，不入库）
+*.bsp
+
 # Python
 __pycache__/
 *.pyc

@@ -1,8 +1,8 @@
 # PRD：城市天文观测规划助手（StarGazer）
 
-> **版本**：v1.7 MVP  
+> **版本**：v1.9 MVP  
 > **作者**：南极企鹅Sylvia  
-> **日期**：2026-04-12  
+> **日期**：2026-05-08  
 > **状态**：数据源已验证，待开发
 
 ---
@@ -212,7 +212,7 @@
   ├──→ Agent 1: 天象分析（独立运行）
   │         │
   │         ▼
-  │    输出「观测需求单」
+  │    输出「观测需求单」（含用户位置的 target_passage + twilight 基准值）
   │    （若所有日期太阳角距 < 15°，提前终止并通知前端）
   │         │
   └──→ Agent 2: 地点筛选（唯一的筛选环节）
@@ -231,9 +231,25 @@
          │         │
          └────┬────┘
               ▼
+    步骤 5.5: 地点星历与晨昏计算
+    （对 Agent 3 存活的候选地点，并行调用
+     Horizons 查询 B + twilight_calculator，
+     获取每个地点的 target_passage + twilight）
+              │
+              ▼
+    步骤 5.6: 地形 × 方位冲突检测（LLM tool calling）
+    （对每个候选地点，LLM 判断知识库 terrain_notes
+     与当晚观测方位是否冲突，输出冲突等级 + 评分）
+              │
+              ▼
         编排层：综合排序
-         （天气 50% + 光污染 25% + 交通 15% + 额外 10%）
+         （天气 50% + 光污染 25% + 交通 15% + 地形方位兼容性 10%）
          （取 top 6）
+              │
+              ▼
+    步骤 5.7: 观测指导生成（LLM）
+    （对 top 6 每个地点，LLM 基于当晚具体条件 +
+     知识库信息生成个性化观测建议文本）
               │
               ▼
         结构化 JSON → 前端
@@ -241,13 +257,16 @@
 
 **各 Agent 职责边界**：
 
-| Agent | 是否筛选 | 是否评分 | 调用外部 API |
-|-------|---------|---------|-------------|
-| Agent 1 天象分析 | 否（仅判断可观测性） | 否 | Horizons（缓存 + 实时 topocentric） |
-| Agent 2 地点筛选 | **是**（距离 + 交通方式 + Bortle，三层过滤） | 否 | 无（纯计算 + RAG 检索） |
-| Agent 3 环境评估 | **是**（天气一票否决） | **是**（天气评分） | 7Timer |
-| Agent 4 交通规划 | 否 | 否（但交通时长参与排序） | 高德地图 |
-| 编排层 | 否 | **是**（综合评分 + 排序） | 无 |
+| Agent | 是否筛选 | 是否评分 | 调用外部 API | 是否涉及 LLM |
+|-------|---------|---------|-------------|-------------|
+| Agent 1 天象分析 | 否（仅判断可观测性） | 否 | Horizons（缓存 + 实时 topocentric）、skyfield（晨昏计算） | 否 |
+| Agent 2 地点筛选 | **是**（距离 + 交通方式 + Bortle，三层过滤） | 否 | 无（纯计算 + RAG 检索） | 否 |
+| Agent 3 环境评估 | **是**（天气一票否决） | **是**（天气评分） | 7Timer | 否 |
+| Agent 4 交通规划 | 否 | 否（但交通时长参与排序） | 高德地图 | 否 |
+| 步骤 5.5 地点星历与晨昏 | 否 | 否 | Horizons（per-location topocentric, 并行）、skyfield（per-location 晨昏） | 否 |
+| 步骤 5.6 地形方位冲突检测 | 否 | **是**（兼容性评分） | 无 | **是（tool calling）** |
+| 编排层 综合排序 | 否 | **是**（综合评分 + 排序） | 无 | 否 |
+| 步骤 5.7 观测指导生成 | 否 | 否 | 无 | **是** |
 
 ### 5.2 Horizons 双查询架构
 
@@ -275,16 +294,17 @@ Agent 1 对 JPL Horizons API 的调用分为两种模式，职责不同：
 
 **查询 B：用户实时观测规划查询（topocentric 坐标，用户触发）**
 
-- 目的：获取目标天体在用户所在地的方位角（AZ）和高度角（EL）随时间变化的数据。
-- 执行时机：用户提交观测规划请求时实时调用。
-- CENTER：`'coord'`，配合 SITE_COORD 设置为用户城市的经纬度（如 `'121.47,31.23,0'` 上海）
+- 目的：获取目标天体在指定地面位置的方位角（AZ）和高度角（EL）随时间变化的数据。
+- 执行时机：用户提交观测规划请求时实时调用。**共 1 + N 次**：Agent 1 以用户位置调用 1 次（基准值），步骤 5.5 以每个存活候选地点的坐标各调用 1 次（N = 存活候选地点数，最多 ~10 个，最终取 top 6）。
+- CENTER：`'coord'`，配合 SITE_COORD 设置为目标经纬度（用户位置或候选地点坐标，如 `'121.47,31.23,0'` 上海、`'119.68,30.58,0'` 天荒坪）
 - COORD_TYPE：`'GEODETIC'`
 - QUANTITIES：`'4'`（Apparent AZ & EL）
 - STEP_SIZE：`'30m'`（每 30 分钟一个数据点）
-- 时间范围：用户所选日期范围内每天的日落前 1 小时至日出后 1 小时
-- 输出：目标天体在当晚的方位角、高度角随时间变化序列，用于确定最佳观测窗口和朝向
+- 时间范围：用户所选日期范围内每天的**当日正午 12:00 至次日正午 12:00**（即一个完整的"观测夜"），确保夜间跨午夜的数据连续不断裂
+- 输出：目标天体在当晚的方位角、高度角随时间变化序列，用于确定最佳观测窗口和朝向。从中提取 `target_passage`（升起/峰值/落下时间 + 峰值高度角）。
+- **并行策略**：步骤 5.5 中的 N 次地点查询之间无数据依赖，使用 `asyncio.gather` 或 `concurrent.futures.ThreadPoolExecutor` 并行调用。单次 Horizons 请求耗时 ~1–3s，并行后总耗时约等于单次请求耗时，不显著增加 60s 总预算中的延迟。
 
-**两种查询的关系**：查询 A 提供"值不值得去看"（亮度预测、是否可观测、月光干扰），查询 B 提供"怎么看"（朝哪个方向、什么时间段、仰角多高）。查询 A 的结果可缓存复用，查询 B 必须按用户位置实时调用。
+**两种查询的关系**：查询 A 提供"值不值得去看"（亮度预测、是否可观测、月光干扰），查询 B 提供"怎么看"（朝哪个方向、什么时间段、仰角多高）。查询 A 的结果可缓存复用，查询 B 必须按观测位置实时调用——Agent 1 以用户位置调用一次获取基准值，步骤 5.5 以每个候选地点位置调用获取地点特定值。
 
 ### 5.3 7Timer 天气数据降级策略
 
@@ -334,7 +354,7 @@ Agent 1 对 JPL Horizons API 的调用分为两种模式，职责不同：
 3. 读取缓存的太阳角距（S-O-T）数据。若用户所选日期的 S-O-T < 15°，标记该日期为「不可观测」，附注原因。
 4. 读取缓存的 /L 或 /T 标识，判断目标为晨星或昏星。
 5. 读取缓存的月亮角距与照明度（T-O-M / MN_Illu%），评估月光干扰等级。
-6. 调用 Horizons 查询 B（topocentric），获取用户位置的 AZ/EL 随时间变化数据，确定观测窗口和方位。
+6. 调用 Horizons 查询 B（topocentric），以**用户位置**为观测点，获取目标天体的 AZ/EL 随时间变化数据，确定观测窗口和方位。从 AZ/EL 数据中提取 `target_passage`（目标升起时间、峰值时间及峰值高度角、落下时间）。同时调用 `twilight_calculator.py`（基于 skyfield），以用户位置计算该日期的晨昏时刻（日落、民昏、天昏、天曙、民曙、日出），输出为 `twilight` 字段。以上数据基于用户位置计算，作为 `observation_summary` 的默认基准值。各候选地点的地点特定值由编排层后续步骤计算（见「步骤 5.5：地点星历与晨昏计算」）。
 7. 根据预测星等和用户设备，计算建议的最低 Bortle 等级。
 
 **亮度 → Bortle 映射规则**：
@@ -374,6 +394,21 @@ Agent 1 对 JPL Horizons API 的调用分为两种模式，职责不同：
       "best_window": {"start": "19:30", "end": "21:00"},
       "azimuth_at_peak": 290,
       "altitude_at_peak": 18,
+      "target_passage": {
+        "rise_time": "19:40",
+        "peak_time": "21:22",
+        "set_time": "23:05",
+        "peak_altitude_deg": 24
+      },
+      "twilight": {
+        "sunset": "17:58",
+        "civil_dusk": "18:26",
+        "astro_dusk": "18:53",
+        "astro_dawn": "04:05",
+        "civil_dawn": "04:33",
+        "sunrise": "05:02",
+        "moon_set": "22:30"
+      },
       "direction_description": "西偏北",
       "moon_illumination_percent": 27.0,
       "moon_target_angle": 73.7,
@@ -511,9 +546,123 @@ Agent 1 对 JPL Horizons API 的调用分为两种模式，职责不同：
 }
 ```
 
+#### 编排层：步骤 5.5 — 地点星历与晨昏计算
+
+**职责**：为 Agent 3 存活的每个候选地点计算地点特定的目标天体过境数据（`target_passage`）和晨昏时刻（`twilight`）。此步骤在 Agent 3 天气筛选之后、Agent 4 交通规划之后（或与 Agent 4 并行）执行，确保只为存活地点消耗 Horizons API 调用配额。
+
+**输入**：Agent 3 存活的候选地点列表（含经纬度）+ Agent 1 的观测需求单（含日期范围、事件 ID）。
+
+**处理逻辑**：
+
+1. **并行 Horizons 查询 B**：对每个存活候选地点，以该地点的经纬度为 `SITE_COORD`，调用 Horizons topocentric 查询（参数同 Agent 1 的查询 B，仅替换坐标）。所有请求使用 `asyncio.gather` 并行发起。
+2. **提取 `target_passage`**：从每个地点的 AZ/EL 时间序列中提取：目标升起时间（EL 首次 > 0°）、峰值时间（EL 最大值）、峰值高度角、落下时间（EL 再次归零）。复用 `horizons_parser.py` 中的提取函数。
+3. **计算 `twilight`**：对每个地点，调用 `twilight_calculator.py`（基于 skyfield），输入地点经纬度 + 日期，输出该地点的日落、民昏（太阳 EL = -6°）、天文昏（EL = -18°）、天文曙、民曙、日出时刻，以及月落时刻。此步骤为纯本地计算，无 API 调用，耗时可忽略（~ms 级）。
+4. **保留采样数据**：每个地点的完整 AZ/EL 时间序列（~30min 间隔）保留为 `azimuth_elevation` 数组，作为前端曲线拟合的校验锚点。
+
+**输出（每个候选地点附加）**：
+
+```json
+{
+  "target_passage": {
+    "rise_time": "19:38",
+    "peak_time": "21:20",
+    "set_time": "23:02",
+    "peak_altitude_deg": 25
+  },
+  "twilight": {
+    "sunset": "17:56",
+    "civil_dusk": "18:24",
+    "astro_dusk": "18:51",
+    "astro_dawn": "04:07",
+    "civil_dawn": "04:35",
+    "sunrise": "05:04",
+    "moon_set": "22:28"
+  },
+  "azimuth_elevation": [
+    {"time": "19:00", "az": 262, "el": 3},
+    {"time": "19:30", "az": 285, "el": 11},
+    {"time": "20:00", "az": 300, "el": 16},
+    {"time": "20:30", "az": 310, "el": 19},
+    {"time": "21:00", "az": 322, "el": 23},
+    {"time": "21:30", "az": 332, "el": 24},
+    {"time": "22:00", "az": 338, "el": 21},
+    {"time": "22:30", "az": 343, "el": 15},
+    {"time": "23:00", "az": 347, "el": 5}
+  ]
+}
+```
+
+**工具依赖**：
+- `backend/tools/horizons_parser.py`：复用现有的 Horizons 响应解析 + `target_passage` 提取逻辑
+- `backend/tools/twilight_calculator.py`（新增）：基于 skyfield 的晨昏时刻计算工具。输入经纬度 + 日期，输出 `twilight` 对象。纯本地计算，不调用任何外部 API。
+
+**性能预算**：假设 Agent 3 存活 ~8–10 个候选地点，并行 Horizons 查询耗时 ~1–3s（等于单次请求耗时），skyfield 本地计算 ~10ms 总计。步骤 5.5 的总耗时约 2–4s，在 60s 总预算中占比很小。
+
+**注意**：长三角区域内各候选地点（跨度 ~200km）的 `target_passage` 和 `twilight` 差异通常很小（升起/落下时间差 ~1–3 分钟，峰值高度角差 <1°，晨昏时刻差 ~1–2 分钟）。尽管如此，为保持数据一致性和前端可视化的精确性，仍为每个地点独立计算。
+
+#### 编排层：步骤 5.6 — 地形 × 方位冲突检测（LLM tool calling）
+
+**职责**：判断每个候选地点的已知地形/环境特征是否与当晚的观测方位冲突，输出结构化兼容性评分。此环节是整个 pipeline 中确定性规则难以覆盖的判断——知识库中的 `terrain_notes` 是自然语言描述（如"东侧有安吉县城光害"、"北面有山脊遮挡低空"），而观测方位是角度值（方位角 330° = 西偏北、高度角 24°），两者的匹配需要语义理解。
+
+**输入（per candidate）**：
+
+```json
+{
+  "location_name": "天荒坪观星营地",
+  "terrain_notes": "东侧有安吉县城光害，建议面朝西侧观测",
+  "facilities": "有停车场，营地内光源管制良好",
+  "observation_direction": "西偏北",
+  "observation_azimuth": 330,
+  "observation_altitude_range": "15°–25°",
+  "visibility_type": "evening"
+}
+```
+
+**实现方式**：Dify workflow 中的 **LLM 节点**，使用 tool calling 模式。LLM 被提供一个名为 `assess_terrain_compatibility` 的工具定义：
+
+```json
+{
+  "name": "assess_terrain_compatibility",
+  "description": "评估观测地点的地形/环境特征与目标天体观测方位的兼容性",
+  "parameters": {
+    "compatibility": {
+      "type": "string",
+      "enum": ["excellent", "good", "moderate", "poor"],
+      "description": "兼容性等级：excellent=地形完美匹配观测方向；good=无明显冲突；moderate=存在轻微影响（如邻近方向有光害）；poor=严重遮挡或光害直接影响观测方向"
+    },
+    "score": {
+      "type": "number",
+      "description": "兼容性评分 0-100，用于综合排序中的地形方位兼容性权重"
+    },
+    "reasoning": {
+      "type": "string",
+      "description": "一句话中文判断理由，如'目标在西偏北方向，与东侧光害无冲突，西侧开阔'。此字段不直接面向用户，仅供调试。"
+    }
+  }
+}
+```
+
+LLM 的 system prompt 指示它：根据地形描述和观测方位判断冲突程度，调用 `assess_terrain_compatibility` 工具输出结构化结果。LLM 需要理解方位语义（"东侧遮挡"不影响"西偏北观测"，但"西北侧有山脊"会影响"西偏北低空目标"）。
+
+**输出（per candidate，附加到候选数据中）**：
+
+```json
+{
+  "terrain_compatibility": {
+    "compatibility": "excellent",
+    "score": 95,
+    "reasoning": "目标在西偏北方向 15°–25°，东侧光害不影响；西侧开阔无遮挡，完美匹配"
+  }
+}
+```
+
+**性能预算**：每个候选地点一次 LLM 调用。输入短（~100 token），输出短（tool call ~50 token），单次延迟 ~0.5–1s。可对 6–10 个候选地点并行调用。总耗时 ~1–2s。
+
+**为什么不用规则引擎**：方位映射（"东侧" → 45°–135° 范围）看似可以编码，但知识库中的地形描述是人工自然语言撰写的，表述多样（"北面"/"偏北方向"/"靠近县城一侧"/"面朝公路方向有灯光"），且涉及程度判断（"轻微光害" vs "严重遮挡"）。LLM 在这种非结构化输入 → 结构化输出的任务上远优于正则匹配或关键词规则。
+
 #### 编排层：综合排序
 
-**职责**：汇总 Agent 1-4 的输出，计算综合评分并排序。
+**职责**：汇总 Agent 1–4 及步骤 5.5–5.6 的输出，计算综合评分并排序。
 
 **评分权重（MVP）**：
 
@@ -522,11 +671,67 @@ Agent 1 对 JPL Horizons API 的调用分为两种模式，职责不同：
 | 天气评分 | 50% | Agent 3 输出的 weather_score |
 | 光污染匹配度 | 25% | Bortle 越低越好，相对于 max_bortle 的余量 |
 | 交通便利性 | 15% | 公共交通时长越短越好（公交时长用于排序，最终由用户自行斟酌） |
-| 额外加分项 | 10% | 地点已知注意事项与当晚观测方位无冲突 |
+| 地形方位兼容性 | 10% | 步骤 5.6 输出的 terrain_compatibility.score |
 
 **推荐数量上限**：排序后最多保留 **6 个**推荐地点。若经筛选后候选不足 6 个，则全部列出。
 
-**最终输出**：结构化 JSON，包含观测条件摘要 + 排序后的候选地点列表（最多 6 个，各附天气、交通、评分），供前端直接渲染。
+**最终输出**：结构化 JSON，包含观测条件摘要 + 排序后的候选地点列表（最多 6 个，各附天气、交通、评分、地形兼容性），传入步骤 5.7。
+
+#### 编排层：步骤 5.7 — 观测指导生成（LLM）
+
+**职责**：为综合排序后的 top 6 每个地点生成**针对当晚具体场景的个性化观测指导文本**，替换知识库中预写的静态 `notes`。
+
+**为什么需要 LLM**：知识库中的 `terrain_notes`、`facilities`、`access_notes` 是通用的地点描述（如"东侧有安吉县城光害，建议面朝西侧观测"），不包含当晚的具体信息。但用户需要的是结合今晚具体条件的指导——目标在什么方位、什么时间出现、应该提前多久到达、低空目标的观测技巧、月光何时不再干扰等。这些需要将结构化数据（方位、时间、月相、天气）和非结构化知识（地形、设施、交通注意事项）综合成流畅的中文段落。
+
+**输入（per location）**：
+
+```json
+{
+  "location": {
+    "name": "天荒坪观星营地",
+    "bortle": 3,
+    "terrain_notes": "东侧有安吉县城光害，建议面朝西侧观测",
+    "facilities": "有停车场，营地内光源管制良好",
+    "access_notes": "末班公交 21:00"
+  },
+  "observation": {
+    "target_name": "C/2025 R3 彗星",
+    "direction": "西偏北",
+    "azimuth_at_peak": 330,
+    "altitude_range": "15°–25°",
+    "best_window": {"start": "20:30", "end": "22:15"},
+    "visibility_type": "evening",
+    "predicted_magnitude": 4.6,
+    "equipment": "binoculars",
+    "moon_impact": "低",
+    "moon_set": "22:28"
+  },
+  "transit_duration_minutes": 180,
+  "terrain_compatibility": {
+    "compatibility": "excellent",
+    "reasoning": "目标在西偏北方向，与东侧光害无冲突；西侧开阔"
+  }
+}
+```
+
+**LLM system prompt 要点**：
+
+- 输出 2–4 句紧凑的中文段落，仪表盘读数式语气，不加感叹号或语气词
+- 必须包含的信息：建议到达时间（观测窗口开始前至少 30 分钟用于暗适应）、观测朝向、低空目标的特殊注意事项（如需要西侧地平线无遮挡）、月光影响何时消除（如月落后观测条件最佳）
+- 可选包含的信息：交通末班车提醒（如末班公交 21:00 与观测窗口冲突则需提前告知）、设施说明
+- 语气参照 PRD Section 2.2 的语言风格：克制、陈述性、仪表盘读数式
+
+**输出（替换 `recommendation.notes`）**：
+
+```
+"建议 19:30 前抵达，预留暗适应时间。目标方位西偏北 330°、高度角 15°–25°，
+需确保西侧至西北侧地平线无遮挡。该营地西侧开阔，完美匹配。22:28 月落后观测
+条件最佳。注意末班公交 21:00，如需乘坐公共交通返回，观测时间受限。"
+```
+
+**性能预算**：6 个地点可并行调用 LLM。每次输入 ~300 token，输出 ~100 token，单次延迟 ~1–2s。并行后总耗时 ~2s。
+
+**fallback**：如果 LLM 调用失败或超时，直接使用知识库中的原始 `terrain_notes` + `facilities` 拼接作为 `notes`，确保不阻塞整个流程。
 
 ---
 
@@ -627,7 +832,22 @@ Response:
     "moon_impact": "低",
     "best_window": {"start": "19:30", "end": "21:00"},
     "target_direction": "西偏北",
-    "target_altitude": "15° - 25°"
+    "target_altitude": "15° - 25°",
+    "target_passage": {
+      "rise_time": "19:40",
+      "peak_time": "21:22",
+      "set_time": "23:05",
+      "peak_altitude_deg": 24
+    },
+    "twilight": {
+      "sunset": "17:58",
+      "civil_dusk": "18:26",
+      "astro_dusk": "18:53",
+      "astro_dawn": "04:05",
+      "civil_dawn": "04:33",
+      "sunrise": "05:02",
+      "moon_set": "22:30"
+    }
   },
   "date_notes": [
     {"date": "2026-04-22", "observable": true, "weather_source": "civil"},
@@ -660,11 +880,37 @@ Response:
           }
         ]
       },
-      "notes": "西侧开阔，适合观测西偏北方向目标",
+      "notes": "建议 19:30 前抵达，预留暗适应时间。目标方位西偏北 330°、高度角 15°–25°，需确保西侧至西北侧地平线无遮挡。该营地西侧开阔，完美匹配。22:28 月落后观测条件最佳。注意末班公交 21:00，如需乘坐公共交通返回，观测时间受限。",
+      "terrain_compatibility": {
+        "compatibility": "excellent",
+        "score": 95,
+        "reasoning": "目标在西偏北方向 15°–25°，东侧光害不影响；西侧开阔无遮挡，完美匹配"
+      },
       "date_comparison": [
         {"date": "2026-04-22", "weather_score": 85},
         {"date": "2026-04-23", "weather_score": 45},
         {"date": "2026-04-24", "weather_score": 72}
+      ],
+      "target_passage": {
+        "rise_time": "19:38",
+        "peak_time": "21:20",
+        "set_time": "23:02",
+        "peak_altitude_deg": 25
+      },
+      "twilight": {
+        "sunset": "17:56",
+        "civil_dusk": "18:24",
+        "astro_dusk": "18:51",
+        "astro_dawn": "04:07",
+        "civil_dawn": "04:35",
+        "sunrise": "05:04",
+        "moon_set": "22:28"
+      },
+      "azimuth_elevation": [
+        {"time": "19:00", "az": 262, "el": 3},
+        {"time": "20:30", "az": 310, "el": 19},
+        {"time": "21:22", "az": 330, "el": 24},
+        {"time": "22:15", "az": 342, "el": 18}
       ]
     }
   ]
@@ -731,7 +977,8 @@ Response:
 | 后端 Agent 编排 | Dify workflow |
 | RAG 知识库 | Dify 内置知识库模块 |
 | 彗星亮度预测 | Python（scipy curve_fit），部署为 Dify 自定义工具，每日定时拟合并缓存 |
-| 天文星历 | JPL Horizons API（双查询架构，详见 5.2 节） |
+| 天文星历 | JPL Horizons API（双查询架构 + 地点并行查询，详见 5.2 节） |
+| 晨昏时刻计算 | Python（skyfield），`backend/tools/twilight_calculator.py`，本地计算无 API 调用 |
 | 彗星观测数据 | COBS API（ICQ 格式） |
 | 天气 | 7Timer（ASTRO 优先，CIVIL 降级） |
 | 交通路线 | 高德地图 API |
@@ -756,9 +1003,15 @@ Response:
 | 10 | Transparency 方向 | 数值越小越好（1=极佳，8=极差），≥ 7 一票否决 | 单位为 mag/airmass 消光值，来源 7Timer 官方 Wiki |
 | 11 | Horizons 响应解析方式 | 项目文件中的独立预处理脚本（`backend/tools/horizons_parser.py`），不放在 Dify Agent 节点中 | 纯文本解析不涉及 LLM 推理，独立脚本可被每日定时任务和用户实时查询复用，且更易单独测试调试 |
 | 12 | 用户位置经纬度转换 | 前端处理（调用高德地理编码 API） | 减少后端复杂度，前端已接入高德 JS API，顺便复用 |
+| 13 | 地形方位兼容性评估方式 | LLM tool calling（步骤 5.6），非规则引擎 | 知识库 terrain_notes 为自然语言，表述多样（"北面"/"偏北方向"/"靠近县城一侧"），正则/关键词规则难以覆盖；LLM 擅长非结构化输入 → 结构化输出 |
+| 14 | 观测 notes 字段生成方式 | LLM 动态生成（步骤 5.7），非知识库静态文本 | 用户需要结合当晚具体条件（方位、时间、月相、末班车）的个性化指导，静态模板无法做到 |
+| 15 | 步骤 5.7 的 fallback 策略 | LLM 失败时退回知识库原始 terrain_notes + facilities 拼接 | 保证 LLM 调用不阻塞整个流程，最坏情况下用户仍能看到地点的基本信息 |
 
 ---
 
 ## 13. 开放问题（待讨论）
 
-（暂无）
+| 编号 | 问题 | 方向 | 备注 |
+|------|------|------|------|
+| 1 | 异常处理与动态降级的 Agent 化 | 引入编排决策 Agent，观察各工具返回状态（成功/失败/部分数据/超时），动态决定降级策略（如 Horizons 对某地点超时 → 用相邻地点数据近似 vs 标记为无星历数据）。当前的 ASTRO → CIVIL → 无数据降级是硬编码 if-else，无法应对复杂的异常组合。 | 改造成本较高，需重新设计 Dify workflow 的错误处理分支 |
+| 2 | 自然语言交互入口 | 在前端增加可选的自然语言输入："周末想带双筒去看彗星，杭州出发，没车"→ LLM Agent 解析意图、提取参数、遇歧义反问、确认后调用 `/api/plan`。经典 tool calling 场景。 | 与精心设计的表单 UI 形成平行路径，MVP 阶段可能过重 |
